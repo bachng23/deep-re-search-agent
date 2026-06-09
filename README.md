@@ -8,7 +8,7 @@ An AI agent that automatically scans academic literature, identifies research ga
 
 Given a research topic or idea, the agent:
 
-1. **Searches** ArXiv and Semantic Scholar for relevant papers
+1. **Searches** ArXiv and OpenAlex for relevant papers
 2. **Contrasts** methodologies, datasets, and findings across papers to surface what's missing
 3. **Scores** your idea's novelty against existing literature (0–100)
 4. **Reports** identified gaps with citations, and explains why your idea is or isn't novel
@@ -29,7 +29,7 @@ User input (topic or idea)
    └────┬─────┘
         │
    ┌────▼─────┐
-   │  Fetcher  │  Calls ArXiv + Semantic Scholar MCP tools  [Fast lane]
+   │  Fetcher  │  Calls ArXiv + OpenAlex MCP tools  [Fast lane]
    └────┬─────┘  ↺ loops until enough papers (max_steps, timeout, stop_criteria)
         │
    ┌────▼─────┐
@@ -86,7 +86,7 @@ paper-research-agent/
 │   │
 │   ├── tools/                            # MCP tools — testable independently
 │   │   ├── arxiv_tool.py                 # search ArXiv, returns enriched objects
-│   │   ├── semantic_scholar_tool.py      # citation graph + metadata
+│   │   ├── openalex.py                   # citation graph + metadata
 │   │   └── __init__.py
 │   │
 │   └── agent/                            # LangGraph graph
@@ -121,7 +121,7 @@ paper-research-agent/
 | LLM — Contrast/Novelty | `o4-mini` | Reasoning lane: multi-paper gap analysis & scoring |
 | Structured output | OpenAI native JSON Schema mode | Schema enforced by API — eliminates manual validate/retry loops |
 | Data — papers | ArXiv API (`arxiv` PyPI) | Full metadata + abstracts, free |
-| Data — citations | Semantic Scholar API | Citation graph, influential papers, free |
+| Data — citations | OpenAlex API | Citation graph, influential papers, open metadata |
 | Tool protocol | FastMCP | Custom MCP server wrapping both APIs |
 | API | FastAPI | Expose agent as REST endpoint |
 | UI | Streamlit | Demo frontend, calls FastAPI |
@@ -137,15 +137,15 @@ This project deliberately applies patterns from the AI Engineer course rather th
 |---|---|---|
 | **Agentic loop** (Plan → Act → Observe → Reflect → Stop) with explicit loop control (`max_steps`, `timeout`, `stop_criteria`) | Fetcher node | Lesson 2.2 |
 | **Structured output first** — define Pydantic schemas *before* writing prompts; use OpenAI native JSON Schema mode | `agent/schemas.py` | Lesson 2.1 |
-| **Tool = workflow, not API wrapper** — `search_papers(topic, year_range, limit)` returns enriched objects, not raw endpoint dumps | `tools/arxiv_tool.py`, `tools/semantic_scholar_tool.py` | Lesson 3.4 |
+| **Tool = workflow, not API wrapper** — `search_papers(topic, year_range, limit)` returns enriched objects, not raw endpoint dumps | `tools/arxiv_tool.py`, `tools/openalex.py` | Lesson 3.4 |
 | **Namespacing** — `arxiv_search`, `s2_search`, `s2_citations` (no generic `search()`) | MCP tool names | Lesson 3.4 |
-| **Helpful errors as prompts** — rate-limit errors return `"Wait 60s or set SEMANTIC_SCHOLAR_API_KEY"` instead of HTTP 429 | Tool error handlers | Lesson 3.4 |
+| **Helpful errors as prompts** — rate-limit errors return `"Wait or set OPENALEX_API_KEY"` instead of HTTP 429 | Tool error handlers | Lesson 3.4 |
 | **Context efficiency** — Contrast clears raw abstracts from state after extracting gap summaries (tool-result clearing) | Graph reducer | Lesson 4.6 |
 | **Quote-first prompting** — Contrast must cite a specific finding/quote from a paper before naming it as evidence for a gap | `agent/prompts.py` | Lesson 4.3 |
 | **Markdown sections, not XML tags** — GPT family responds better to markdown headers + JSON Schema than to Claude-style `<instructions>` tags | `agent/prompts.py` | Lesson 4.3 (inverse) |
 | **No "think step by step" for reasoning models** — `o4-mini` over-thinks if pushed; we only specify output shape | Contrast/Novelty prompts | Lesson 4.3 |
 | **Stable prefix for KV cache** — no `datetime.now()` in system prompts; JSON serialized with `sort_keys=True` | `agent/prompts.py`, state serialization | Lesson 4.7 |
-| **Parallel tool calls** — Fetcher calls ArXiv + Semantic Scholar concurrently | Fetcher node | Lesson 4.3 |
+| **Parallel tool calls** — Fetcher calls ArXiv + OpenAlex concurrently | Fetcher node | Lesson 4.3 |
 | **Evaluation-driven** — track `tool_call_count`, `token_usage`, `repeated_searches`, `wrong_tool_usage`, not just final accuracy | `tests/evaluation.py` | Lesson 3.4 |
 | **Extraction vs Calculation** — LLM extracts, Python computes (paper counts, year ranges, score normalization) | `nodes.py` helpers | Lesson 2.6 |
 | **Audit logging** — every node call logs input, output, model, latency, timestamp to LangSmith | Graph middleware | Lesson 2.6 |
@@ -159,7 +159,7 @@ This project deliberately applies patterns from the AI Engineer course rather th
 - Python 3.11+
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 - (Optional) A [LangSmith API key](https://smith.langchain.com/) for tracing
-- (Optional) A [Semantic Scholar API key](https://www.semanticscholar.org/product/api) — raises rate limit from 100/5min to 1/sec
+- (Optional) A [OpenAlex API key](https://openalex.org/settings/api) — raises the daily credit limit and avoids the lowest quota tier
 
 ### Install
 
@@ -189,8 +189,8 @@ MODEL_TIER_OVERRIDE=
 LANGSMITH_API_KEY=...
 LANGSMITH_PROJECT=paper-research-agent
 
-# Optional — raises Semantic Scholar rate limit
-SEMANTIC_SCHOLAR_API_KEY=
+# Optional — OpenAlex API key
+OPENALEX_API_KEY=
 ```
 
 ### Run
@@ -275,9 +275,9 @@ Run `python tests/evaluation.py` to generate `evaluation_results.md`.
 ## Known limitations
 
 - **Abstract-only**: the agent reads abstracts, not full paper text. Deep methodological gaps may be missed.
-- **English only**: ArXiv and Semantic Scholar coverage is strongest for English-language CS papers.
+- **English only**: ArXiv and OpenAlex coverage is strongest for English-language CS papers.
 - **Novelty scoring uses a reasoning model (`o4-mini`)** — scores are explainable (`novelty_reasoning` + `overlapping_papers` always returned) but are reasoned estimates, not ground truth. Use as a signal, not a verdict.
-- **Rate limits**: Semantic Scholar API allows 100 requests/5 minutes unauthenticated. For heavy use, set `SEMANTIC_SCHOLAR_API_KEY`.
+- **Rate limits**: OpenAlex now requires a free API key for full usage. For heavy use, set `OPENALEX_API_KEY`.
 - **No XML-tag prompts**: by design — GPT family responds better to markdown + native JSON Schema than to Claude-style `<instructions>` tags. Do not port Claude prompt patterns wholesale.
 
 ---

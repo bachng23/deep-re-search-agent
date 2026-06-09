@@ -4,8 +4,6 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from src.paper_research_agent.tools import semantic_scholar
-
 ModelTier = Literal["fast", "balanced", "reasoning"]
 
 
@@ -16,9 +14,7 @@ class Settings(BaseSettings):
 
     api_key: str = Field(..., alias="API_KEY")
 
-    semantic_scholar_api_key: str | None = Field(
-        default=None, alias="SEMANTIC_SCHOLAR_API_KEY"
-    )
+    openalex_api_key: str | None = Field(default=None, alias="OPENALEX_API_KEY")
 
     langsmith_api_key: str | None = Field(default=None, alias="LANGSMITH_API_KEY")
     langsmith_project: str = Field(
@@ -34,7 +30,7 @@ class Settings(BaseSettings):
     reasoning_model: str = "deepseek/deepseek-v4-pro"
 
     arxiv_max_results: int = 8
-    semantic_scholar_max_results: int = 8
+    openalex_max_results: int = 8
     request_timeout_seconds: int = 20
 
 
