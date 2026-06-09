@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     arxiv_max_results: int = 8
     semantic_scholar_max_results: int = 8
+    request_timeout_seconds: int = 20
 
 
 @lru_cache
