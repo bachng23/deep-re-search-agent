@@ -2,17 +2,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from paper_research_agent.core.models import Paper
+
 Confidence = Literal["low", "medium", "high"]
-
-
-class Paper(BaseModel):
-    title: str
-    authors: list[str] = Field(default_factory=list)
-    year: int | None = None
-    abstract: str | None = None
-    url: str | None = None
-    source: Literal["arxiv", "openalex"]
-    citation_count: int | None = None
 
 
 class ResearchGap(BaseModel):

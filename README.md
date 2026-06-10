@@ -71,42 +71,57 @@ Per the AI Engineer course (Lesson 2.5 — *Fast / Balanced / Reasoning lanes*),
 
 ## Project structure
 
+Dependency direction: `core` ← `providers` ← `features` ← `agent` ← (`api`, `cli`).
+Lower layers never import higher ones; features never import each other —
+they communicate only through `ResearchState`.
+
 ```
 paper-research-agent/
-├── pyproject.toml                        # package config, deps, entry points
+├── pyproject.toml                        # deps, `paper-research` CLI entry point, pytest config
 ├── .env.example                          # required environment variables
-├── Makefile                              # make dev, make test, make lint
 ├── README.md
 │
 ├── src/paper_research_agent/             # core package — pip installable
-│   ├── __init__.py                       # exports run_research(), ResearchResult
-│   ├── config.py                         # Pydantic Settings, constants
-│   ├── llm.py                            # ⭐ model router + OpenAI client factory
-│   ├── state.py                          # ResearchState (Pydantic, not TypedDict)
+│   ├── __init__.py                       # public API: run_research(), ResearchState
+│   ├── config.py                         # Pydantic Settings + tier → model mapping
+│   ├── llm.py                            # ⭐ chat model factory per tier (fast/balanced/reasoning)
+│   ├── cli.py                            # `paper-research "<topic>" --idea "..."`
 │   │
-│   ├── tools/                            # MCP tools — testable independently
-│   │   ├── arxiv_tool.py                 # search ArXiv, returns enriched objects
-│   │   ├── openalex.py                   # citation graph + metadata
-│   │   └── __init__.py
+│   ├── core/                             # domain layer — depends on nothing else
+│   │   ├── models.py                     # Paper, PaperSource
+│   │   ├── state.py                      # ResearchState, ResearchGap (Pydantic)
+│   │   ├── errors.py                     # ProviderError, RateLimitError, ...
+│   │   └── logging.py
 │   │
-│   └── agent/                            # LangGraph graph
-│       ├── prompts.py                    # markdown sections (not Claude XML)
-│       ├── schemas.py                    # ⭐ Pydantic models for structured output
-│       ├── nodes.py                      # planner, fetcher, contrast, novelty, writer
-│       ├── graph.py                      # StateGraph, edges, compile()
-│       └── __init__.py
-│
-├── api/                                  # FastAPI backend
-│   ├── main.py                           # app init, CORS, routers
-│   ├── routes.py                         # POST /research, GET /health
-│   └── schemas.py                        # Pydantic request/response models
-│
-├── frontend/                             # Streamlit UI
-│   └── app.py                            # calls FastAPI, renders report
+│   ├── providers/                        # external paper sources
+│   │   ├── base.py                       # PaperProvider protocol — add a source = 1 file
+│   │   ├── arxiv.py
+│   │   └── openalex.py
+│   │
+│   ├── tools/                            # thin agent/MCP-facing wrappers over providers
+│   │   ├── arxiv_tool.py
+│   │   └── openalex.py
+│   │
+│   ├── features/                         # vertical slices — one package per graph node
+│   │   ├── planning/                     # plan_queries (LLM planner lands here)
+│   │   ├── fetching/                     # fetch_papers: service + dedup + ranking
+│   │   ├── contrast/                     # find_gaps (planned)
+│   │   ├── novelty/                      # score_novelty (planned)
+│   │   └── writing/                      # write_report (planned)
+│   │
+│   ├── agent/                            # graph assembly only — no business logic
+│   │   ├── registry.py                   # ⭐ ordered NodeSpec list; add a node here
+│   │   └── graph.py                      # builds StateGraph from registry, run_research()
+│   │
+│   └── api/                              # FastAPI layer
+│       ├── main.py                       # create_app()
+│       ├── routes.py                     # POST /research, GET /health
+│       └── schemas.py                    # request/response models
 │
 └── tests/
-    ├── test_tools.py                     # unit tests for MCP tools
-    └── evaluation.py                     # 5 test cases + failure analysis
+    ├── test_fetching.py                  # pure unit tests (dedup, ranking)
+    ├── test_graph.py                     # end-to-end graph run with stub provider
+    └── integration/test_providers.py     # real APIs — `pytest -m integration`
 ```
 
 ---

@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     )
 
     api_key: str = Field(..., alias="API_KEY")
+    llm_base_url: str = Field(
+        default="https://openrouter.ai/api/v1", alias="LLM_BASE_URL"
+    )
 
     openalex_api_key: str | None = Field(default=None, alias="OPENALEX_API_KEY")
 
