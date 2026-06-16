@@ -3,7 +3,7 @@ from __future__ import annotations
 from langgraph.graph import END, StateGraph
 
 from paper_research_agent.core.state import ResearchState
-from paper_research_agent.features.contrast import find_gaps
+from paper_research_agent.features.contrast import find_gaps, rank_gaps
 from paper_research_agent.features.coverage import (
     assess_coverage,
     judge_coverage,
@@ -26,6 +26,7 @@ def build_graph():
     graph.add_node("plan_queries", plan_queries)
     graph.add_node("fetch_papers", fetch_papers)
     graph.add_node("find_gaps", find_gaps)
+    graph.add_node("rank_gaps", rank_gaps)
     graph.add_node("assess_coverage", assess_coverage)
     graph.add_node("judge_coverage", judge_coverage)
     graph.add_node("score_novelty", score_novelty)
@@ -45,10 +46,11 @@ def build_graph():
         _route_after_assessment,
         {
             "continue": "plan_queries",  # loop back to plan_queries
-            "finish": "score_novelty",
+            "finish": "rank_gaps",
         },
     )
 
+    graph.add_edge("rank_gaps", "score_novelty")
     graph.add_edge("score_novelty", "write_report")
     graph.add_edge("write_report", END)
 
