@@ -29,6 +29,18 @@ class RoundLog(BaseModel):
     closed_gaps: int = 0
 
 
+class Conflict(BaseModel):
+    topic: str = Field(description="The specific point the papers disagree on.")
+
+    position_a: str
+    position_a_papers: list[str] = Field(default_factory=list)
+    position_a_quote: str = ""
+
+    position_b: str
+    position_b_papers: list[str] = Field(default_factory=list)
+    position_b_quote: str = ""
+
+
 class ResearchState(BaseModel):
     topic: str
     user_idea: str | None = None
@@ -37,6 +49,7 @@ class ResearchState(BaseModel):
     papers: list[Paper] = Field(default_factory=list)
 
     gaps: list[ResearchGap] = Field(default_factory=list)
+    conflicts: list[Conflict] = Field(default_factory=list)
 
     novelty_score: int | None = Field(default=None, ge=0, le=100)
     novelty_reasoning: str | None = None
@@ -57,6 +70,8 @@ class ResearchState(BaseModel):
     use_llm_judge: bool = True
     coverage_sufficient: bool = False
     coverage_reasoning: str | None = None
+
+    use_tool_agent: bool = True
 
     errors: list[str] = Field(default_factory=list)
     tool_call_count: int = 0

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from paper_research_agent.core.models import Paper
-from paper_research_agent.core.state import ResearchGap, ResearchState
+from paper_research_agent.core.state import Conflict, ResearchGap, ResearchState
 from paper_research_agent.features.writing.prompts import (
     WRITER_SYSTEM_PROMPT,
     WRITER_USER_PROMPT,
@@ -15,8 +15,10 @@ def write_report(state: ResearchState) -> ResearchState:
 
     try:
         body = _write_report_with_llm(state)
+        conflicts = _format_conflicts(state.conflicts)
         references = _format_references(state.papers)
-        state.report_markdown = f"{body}\n\n{references}"
+        sections = [body, conflicts, references]
+        state.report_markdown = "\n\n".join(s for s in sections if s)
     except Exception as e:
         state.errors.append(f"writing failed: {e}")
 
@@ -94,4 +96,18 @@ def _format_references(papers: list[Paper]) -> str:
 
         lines.append(" ".join(parts))
 
+    return "\n".join(lines)
+
+
+def _format_conflicts(conflicts: list[Conflict]) -> str:
+    if not conflicts:
+        return ""
+
+    lines = ["## Conflicting Evidence"]
+    for c in conflicts:
+        a = ", ".join(c.position_a_papers)
+        b = ", ".join(c.position_b_papers)
+        lines.append(f"- **{c.topic}**")
+        lines.append(f" - {c.position_a} ({a}) - '{c.position_a_quote}'")
+        lines.append(f" - {c.position_b} ({b}) - '{c.position_b_quote}'")
     return "\n".join(lines)

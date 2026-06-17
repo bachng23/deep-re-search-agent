@@ -5,6 +5,7 @@ loop continues), round 2 yields a high-confidence gap (closed -> loop stops and
 the reporting tail runs).
 """
 
+import paper_research_agent.features.conflicts.node as conflicts_node
 import paper_research_agent.features.contrast.node as contrast_node
 import paper_research_agent.features.coverage.node as coverage_node
 import paper_research_agent.features.novelty.node as novelty_node
@@ -13,6 +14,7 @@ import paper_research_agent.features.writing.node as writing_node
 from paper_research_agent.agent.graph import run_research
 from paper_research_agent.core.models import Paper
 from paper_research_agent.core.state import ResearchGap
+from paper_research_agent.features.conflicts.schemas import ConflictAnalysis
 from paper_research_agent.features.contrast.schemas import GapAnalysis
 from paper_research_agent.features.coverage.schemas import CoverageJudgment
 from paper_research_agent.features.fetching import node as fetching_node
@@ -71,6 +73,11 @@ def test_loop_runs_two_rounds_then_reports(monkeypatch):
     monkeypatch.setattr(
         fetching_node, "default_providers", lambda: [_StubProvider()]
     )
+    # Force the deterministic fetch path (stub provider) so the loop test stays
+    # offline; the tool-agent path is covered separately in test_mcp.py.
+    monkeypatch.setattr(
+        fetching_node, "search_via_tool_agent", lambda queries: ([], 0)
+    )
 
     # Planner: distinct queries per round.
     monkeypatch.setattr(
@@ -122,6 +129,12 @@ def test_loop_runs_two_rounds_then_reports(monkeypatch):
         _sequencing_factory(
             [CoverageJudgment(sufficient=False, reasoning="keep going")]
         ),
+    )
+    # Conflicts node runs once on the finish path; mock it to no conflicts.
+    monkeypatch.setattr(
+        conflicts_node,
+        "chat_model_for_tier",
+        _sequencing_factory([ConflictAnalysis(conflicts=[])]),
     )
 
     state = run_research(topic="long-document RAG", user_idea="hierarchical chunking")
