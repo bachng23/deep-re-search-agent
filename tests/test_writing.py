@@ -97,6 +97,6 @@ def test_format_references_truncates_authors():
     refs = _format_references(papers)
 
     assert refs.startswith("## References")
-    assert "[1] Many authors" in refs
+    assert "[1] [Many authors (2022)](http://x)" in refs  # title is a clickable link
     assert "A, B, C et al." in refs
     assert "http://x" in refs

@@ -79,24 +79,28 @@ def _format_papers(papers: list[Paper]) -> str:
 
 
 def _format_references(papers: list[Paper]) -> str:
-    lines = ["## References"]
+    entries: list[str] = []
 
     for i, paper in enumerate(papers, start=1):
         authors = ", ".join(paper.authors[:3])
         if len(paper.authors) > 3:
             authors += " et al."
 
-        parts = [f"[{i}] {paper.title}"]
+        title = paper.title
         if paper.year:
-            parts.append(f"({paper.year})")
+            title += f" ({paper.year})"
+
+        # embed the URL into the title -> one clickable line per paper
+        titled = f"[{title}]({paper.url})" if paper.url else title
+
+        line = f"[{i}] {titled}"
         if authors:
-            parts.append(f"- {authors}")
-        if paper.url:
-            parts.append(paper.url)
+            line += f" — {authors}"
 
-        lines.append(" ".join(parts))
+        entries.append(line)
 
-    return "\n".join(lines)
+    # two trailing spaces = markdown hard break, so each reference is its own line
+    return "## References\n\n" + "  \n".join(entries)
 
 
 def _format_conflicts(conflicts: list[Conflict]) -> str:
