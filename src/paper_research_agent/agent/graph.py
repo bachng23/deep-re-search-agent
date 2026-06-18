@@ -17,6 +17,7 @@ from paper_research_agent.features.novelty import score_novelty
 from paper_research_agent.features.planning import plan_queries
 from paper_research_agent.features.reading import read_papers
 from paper_research_agent.features.writing import write_report
+from paper_research_agent.memory import recall_prior, remember_result
 
 
 def _route_after_assessment(state: ResearchState) -> str:
@@ -38,10 +39,13 @@ def build_graph():
     graph.add_node("write_report", write_report)
     graph.add_node("read_papers", read_papers)
     graph.add_node("refine_gaps", refine_gaps)
+    graph.add_node("recall_prior", recall_prior)
+    graph.add_node("remember_result", remember_result)
 
-    graph.set_entry_point("plan_queries")
+    graph.set_entry_point("recall_prior")
 
     # The research loop
+    graph.add_edge("recall_prior", "plan_queries")
     graph.add_edge("plan_queries", "fetch_papers")
     graph.add_edge("fetch_papers", "find_gaps")
     graph.add_edge("find_gaps", "assess_coverage")
@@ -62,7 +66,8 @@ def build_graph():
     graph.add_edge("rank_gaps", "find_conflicts")
     graph.add_edge("find_conflicts", "score_novelty")
     graph.add_edge("score_novelty", "write_report")
-    graph.add_edge("write_report", END)
+    graph.add_edge("write_report", "remember_result")
+    graph.add_edge("remember_result", END)
 
     return graph.compile()
 

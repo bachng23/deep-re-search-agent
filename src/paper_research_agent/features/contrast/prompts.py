@@ -26,6 +26,9 @@ Research Topic:
 User idea:
     {user_idea}
 
+Related findings from earlier research (may be empty; treat as hints, verify against the papers):
+    {prior_findings}
+
 Papers (title, year, text):
     {papers}
 

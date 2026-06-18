@@ -50,6 +50,7 @@ class ResearchState(BaseModel):
 
     gaps: list[ResearchGap] = Field(default_factory=list)
     conflicts: list[Conflict] = Field(default_factory=list)
+    recalled_gaps: list[str] = Field(default_factory=list)
 
     novelty_score: int | None = Field(default=None, ge=0, le=100)
     novelty_reasoning: str | None = None

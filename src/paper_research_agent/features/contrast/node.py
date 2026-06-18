@@ -48,6 +48,7 @@ def _discover_gaps_with_llm(state: ResearchState) -> list[ResearchGap]:
     prompt = CONTRAST_USER_PROMPT.format(
         topic=state.topic,
         user_idea=state.user_idea or "Not provided",
+        prior_findings=_format_prior(state.recalled_gaps),
         papers=_format_papers(state.papers),
     )
 
@@ -114,3 +115,7 @@ def _format_papers(papers: list[Paper]) -> str:
         blocks.append(f"[{i}] {paper.title} ({paper.year})\n{body}")
 
     return "\n\n".join(blocks)
+
+
+def _format_prior(gaps: list[str]) -> str:
+    return "\n".join(f"- {g}" for g in gaps) if gaps else "None."
