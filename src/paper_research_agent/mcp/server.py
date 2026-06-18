@@ -23,6 +23,7 @@ def _serialize(paper: Paper) -> dict:
         "year": paper.year,
         "abstract": abstract,
         "url": paper.url,
+        "pdf_url": paper.pdf_url,
         "source": paper.source,
         "citation_count": paper.citation_count,
     }
